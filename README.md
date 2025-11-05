@@ -17,51 +17,54 @@ Control your Cosori smart kettle from Home Assistant using an ESP32 and BLE.
 - **Cosori smart kettle** with BLE (tested with model C4:A9:B8:73:AB:29)
 - Stable power supply for ESP32
 
-## Installation
+## Quick Start
 
-### Option 1: External Component (Recommended)
-
-Add the following to your ESPHome YAML configuration:
+**Copy this complete configuration, change the MAC address, and flash to your ESP32:**
 
 ```yaml
+esphome:
+  name: cosori-kettle
+  platform: ESP32
+  board: esp32dev
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Cosori Kettle Fallback"
+    password: !secret fallback_password
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  password: !secret ota_password
+
+logger:
+
+# External component from GitHub
 external_components:
   - source: github://barrymichels/CosoriKettleBLE
     components: [cosori_kettle_ble]
     refresh: 0s
-```
 
-### Option 2: Local Component
-
-1. Clone this repository
-2. Copy the `components/cosori_kettle_ble` directory to your ESPHome `custom_components` folder:
-   ```
-   esphome/
-     config/
-       custom_components/
-         cosori_kettle_ble/
-   ```
-
-## Configuration
-
-See [cosori-kettle-example.yaml](cosori-kettle-example.yaml) for a complete configuration example.
-
-### Minimal Configuration
-
-```yaml
 # BLE tracker
 esp32_ble_tracker:
   scan_parameters:
     active: false
 
-# BLE client
+# BLE client - CHANGE THIS MAC ADDRESS TO YOUR KETTLE'S ADDRESS
 ble_client:
-  - mac_address: "C4:A9:B8:73:AB:29"  # Your kettle's MAC
+  - mac_address: "C4:A9:B8:73:AB:29"
     id: cosori_kettle_client
+    auto_connect: true
 
 # Cosori kettle component
 cosori_kettle_ble:
   ble_client_id: cosori_kettle_client
   id: my_kettle
+  update_interval: 1s
 
 # Sensors
 sensor:
@@ -81,7 +84,7 @@ binary_sensor:
     heating:
       name: "Kettle Heating"
 
-# Number (target setpoint)
+# Number (target temperature control)
 number:
   - platform: cosori_kettle_ble
     cosori_kettle_ble_id: my_kettle
@@ -98,6 +101,8 @@ switch:
       name: "Kettle BLE Connection"
 ```
 
+**That's it!** Just find your kettle's MAC address (see below) and you're ready to go.
+
 ## Finding Your Kettle's MAC Address
 
 ### Method 1: Using `bluetoothctl` (Linux)
@@ -113,8 +118,8 @@ exit
 
 ### Method 2: Using BLE Scanner App
 
-- iOS: Download "BLE Scanner" or "LightBlue"
-- Android: Download "nRF Connect" or "BLE Scanner"
+- **iOS**: Download "BLE Scanner" or "LightBlue"
+- **Android**: Download "nRF Connect" or "BLE Scanner"
 - Scan for devices and look for your kettle
 - Note the MAC address
 
@@ -133,6 +138,10 @@ async def main():
 
 asyncio.run(main())
 ```
+
+## Advanced Configuration
+
+See [cosori-kettle-example.yaml](cosori-kettle-example.yaml) for a complete configuration example.
 
 ## Entities
 
