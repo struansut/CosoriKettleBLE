@@ -6,6 +6,9 @@ from esphome.const import CONF_ID
 from . import COSORI_KETTLE_BLE_COMPONENT_SCHEMA, CONF_COSORI_KETTLE_BLE_ID, cosori_kettle_ble_ns
 
 CONF_TARGET_SETPOINT = "target_setpoint"
+CONF_MIN_VALUE = "min_value"
+CONF_MAX_VALUE = "max_value"
+CONF_STEP = "step"
 
 CosoriKettleNumber = cosori_kettle_ble_ns.class_("CosoriKettleNumber", number.Number, cg.Component)
 
@@ -14,9 +17,12 @@ CONFIG_SCHEMA = COSORI_KETTLE_BLE_COMPONENT_SCHEMA.extend(
         cv.Optional(CONF_TARGET_SETPOINT): number.number_schema(
             CosoriKettleNumber,
             unit_of_measurement="°F",
-            min_value=104,
-            max_value=212,
-            step=1,
+        ).extend(
+            {
+                cv.Optional(CONF_MIN_VALUE, default=104.0): cv.float_,
+                cv.Optional(CONF_MAX_VALUE, default=212.0): cv.float_,
+                cv.Optional(CONF_STEP, default=1.0): cv.float_,
+            }
         ),
     }
 )
@@ -28,6 +34,11 @@ async def to_code(config):
 
     if CONF_TARGET_SETPOINT in config:
         conf = config[CONF_TARGET_SETPOINT]
-        num = await number.new_number(conf, min_value=104, max_value=212, step=1)
+        num = await number.new_number(
+            conf,
+            min_value=conf[CONF_MIN_VALUE],
+            max_value=conf[CONF_MAX_VALUE],
+            step=conf[CONF_STEP],
+        )
         await cg.register_parented(num, config[CONF_COSORI_KETTLE_BLE_ID])
         cg.add(parent.set_target_setpoint_number(num))
