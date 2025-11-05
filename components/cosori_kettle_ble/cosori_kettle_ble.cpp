@@ -67,8 +67,13 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
     case ESP_GATTC_SEARCH_CMPL_EVT: {
       ESP_LOGI(TAG, "Service search complete");
 
+      // Convert UUID strings to ESPBTUUID
+      auto service_uuid = esp32_ble_tracker::ESPBTUUID::from_uuid(COSORI_SERVICE_UUID);
+      auto rx_uuid = esp32_ble_tracker::ESPBTUUID::from_uuid(COSORI_RX_CHAR_UUID);
+      auto tx_uuid = esp32_ble_tracker::ESPBTUUID::from_uuid(COSORI_TX_CHAR_UUID);
+
       // Get RX characteristic (for notifications)
-      auto *rx_chr = this->parent_->get_characteristic(COSORI_SERVICE_UUID, COSORI_RX_CHAR_UUID);
+      auto *rx_chr = this->parent_->get_characteristic(service_uuid, rx_uuid);
       if (rx_chr == nullptr) {
         ESP_LOGE(TAG, "RX characteristic not found");
         break;
@@ -76,7 +81,7 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
       this->rx_char_handle_ = rx_chr->handle;
 
       // Get TX characteristic (for writes)
-      auto *tx_chr = this->parent_->get_characteristic(COSORI_SERVICE_UUID, COSORI_TX_CHAR_UUID);
+      auto *tx_chr = this->parent_->get_characteristic(service_uuid, tx_uuid);
       if (tx_chr == nullptr) {
         ESP_LOGE(TAG, "TX characteristic not found");
         break;

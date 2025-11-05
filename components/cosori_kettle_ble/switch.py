@@ -13,16 +13,12 @@ CosoriKettleBLEConnectionSwitch = cosori_kettle_ble_ns.class_("CosoriKettleBLECo
 
 CONFIG_SCHEMA = COSORI_KETTLE_BLE_COMPONENT_SCHEMA.extend(
     {
-        cv.Optional(CONF_HEATING_SWITCH): switch.SWITCH_SCHEMA.extend(
-            {
-                cv.GenerateID(): cv.declare_id(CosoriKettleHeatingSwitch),
-            }
-        ).extend(cv.COMPONENT_SCHEMA),
-        cv.Optional(CONF_BLE_CONNECTION_SWITCH): switch.SWITCH_SCHEMA.extend(
-            {
-                cv.GenerateID(): cv.declare_id(CosoriKettleBLEConnectionSwitch),
-            }
-        ).extend(cv.COMPONENT_SCHEMA),
+        cv.Optional(CONF_HEATING_SWITCH): switch.switch_schema(
+            CosoriKettleHeatingSwitch,
+        ),
+        cv.Optional(CONF_BLE_CONNECTION_SWITCH): switch.switch_schema(
+            CosoriKettleBLEConnectionSwitch,
+        ),
     }
 )
 
@@ -33,16 +29,12 @@ async def to_code(config):
 
     if CONF_HEATING_SWITCH in config:
         conf = config[CONF_HEATING_SWITCH]
-        sw = cg.new_Pvariable(conf[CONF_ID])
-        await switch.register_switch(sw, conf)
-        await cg.register_component(sw, conf)
-        cg.add(sw.set_parent(parent))
+        sw = await switch.new_switch(conf)
+        await cg.register_parented(sw, config[CONF_COSORI_KETTLE_BLE_ID])
         cg.add(parent.set_heating_switch(sw))
 
     if CONF_BLE_CONNECTION_SWITCH in config:
         conf = config[CONF_BLE_CONNECTION_SWITCH]
-        sw = cg.new_Pvariable(conf[CONF_ID])
-        await switch.register_switch(sw, conf)
-        await cg.register_component(sw, conf)
-        cg.add(sw.set_parent(parent))
+        sw = await switch.new_switch(conf)
+        await cg.register_parented(sw, config[CONF_COSORI_KETTLE_BLE_ID])
         cg.add(parent.set_ble_connection_switch(sw))
