@@ -67,10 +67,11 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
     case ESP_GATTC_SEARCH_CMPL_EVT: {
       ESP_LOGI(TAG, "Service search complete");
 
-      // Convert UUID strings to ESPBTUUID
-      auto service_uuid = esp32_ble_tracker::ESPBTUUID::from_uuid(COSORI_SERVICE_UUID);
-      auto rx_uuid = esp32_ble_tracker::ESPBTUUID::from_uuid(COSORI_RX_CHAR_UUID);
-      auto tx_uuid = esp32_ble_tracker::ESPBTUUID::from_uuid(COSORI_TX_CHAR_UUID);
+      // These UUIDs are 16-bit UUIDs in Bluetooth base UUID format
+      // 0000fff0-0000-1000-8000-00805f9b34fb = 0xfff0
+      auto service_uuid = esp32_ble_tracker::ESPBTUUID::from_uint16(0xfff0);
+      auto rx_uuid = esp32_ble_tracker::ESPBTUUID::from_uint16(0xfff1);
+      auto tx_uuid = esp32_ble_tracker::ESPBTUUID::from_uint16(0xfff2);
 
       // Get RX characteristic (for notifications)
       auto *rx_chr = this->parent_->get_characteristic(service_uuid, rx_uuid);
