@@ -6,7 +6,7 @@ from esphome.const import CONF_ID
 
 CODEOWNERS = ["@barrymichels"]
 DEPENDENCIES = ["ble_client"]
-AUTO_LOAD = ["sensor", "binary_sensor", "number", "switch", "climate"]
+AUTO_LOAD = ["sensor", "binary_sensor", "number", "switch"]
 
 CONF_COSORI_KETTLE_BLE_ID = "cosori_kettle_ble_id"
 
@@ -22,7 +22,7 @@ COSORI_KETTLE_BLE_COMPONENT_SCHEMA = cv.Schema(
 )
 
 CONFIG_SCHEMA = (
-    cv.Schema(
+    climate.CLIMATE_SCHEMA.extend(
         {
             cv.GenerateID(): cv.declare_id(CosoriKettleBLE),
         }
@@ -37,3 +37,4 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await ble_client.register_ble_node(var, config)
+    await climate.register_climate(var, config)

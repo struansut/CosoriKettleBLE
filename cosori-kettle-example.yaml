@@ -72,6 +72,7 @@ external_components:
 cosori_kettle_ble:
   ble_client_id: cosori_kettle_client
   id: my_cosori_kettle
+  name: "${friendly_name} Temperature Control"  # Sets the climate entity name
   update_interval: 1s
 
 # ============================================================================

@@ -64,6 +64,7 @@ ble_client:
 cosori_kettle_ble:
   ble_client_id: cosori_kettle_client
   id: my_kettle
+  name: "Kettle"
   update_interval: 1s
 
 # Sensors
@@ -105,7 +106,18 @@ switch:
 
 ## Climate Entity & Thermostat Card
 
-The kettle automatically appears as a **climate entity** in Home Assistant, which means you can use the beautiful native **thermostat card** with its semi-circle temperature slider!
+The kettle **automatically appears as a climate entity** in Home Assistant when you add the component! This means you can use the beautiful native **thermostat card** with its semi-circle temperature slider right away.
+
+### Customizing the Climate Entity Name
+
+In your ESPHome config, you can optionally set a name for the climate entity:
+
+```yaml
+cosori_kettle_ble:
+  ble_client_id: cosori_kettle_client
+  id: my_kettle
+  name: "Kettle"  # This sets the climate entity name
+```
 
 ### Using the Thermostat Card
 
@@ -113,7 +125,7 @@ Add this to your Lovelace dashboard:
 
 ```yaml
 type: thermostat
-entity: climate.cosori_kettle
+entity: climate.kettle  # or whatever name you chose
 ```
 
 The thermostat card provides:
