@@ -2,7 +2,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import number
-from esphome.const import CONF_ID, UNIT_FAHRENHEIT
+from esphome.const import CONF_ID
 from . import COSORI_KETTLE_BLE_COMPONENT_SCHEMA, CONF_COSORI_KETTLE_BLE_ID, cosori_kettle_ble_ns
 
 CONF_TARGET_SETPOINT = "target_setpoint"
@@ -17,7 +17,7 @@ CONFIG_SCHEMA = COSORI_KETTLE_BLE_COMPONENT_SCHEMA.extend(
                 cv.Optional("min_value", default=104): cv.float_,
                 cv.Optional("max_value", default=212): cv.float_,
                 cv.Optional("step", default=1): cv.float_,
-                cv.Optional("unit_of_measurement", default=UNIT_FAHRENHEIT): cv.string,
+                cv.Optional("unit_of_measurement", default="°F"): cv.string,
             }
         ).extend(cv.COMPONENT_SCHEMA),
     }
