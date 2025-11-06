@@ -216,13 +216,18 @@ Both fields correlate with the heating state, but they serve different purposes.
 
 **Location:** Both packet types, payload[6] (setpoint) and payload[7] (current)
 
-**Temperature Range:**
-- **Setpoint:** 104-212°F (40-100°C)
-- **Current:** 40-230°F (reading range)
+**Temperature Ranges:**
+- **Setpoint (commanded):** 104-212°F (40-100°C)
+  - This is the range you can set as a target temperature
+- **Current (sensor validation):** 40-230°F
+  - Readings outside this range indicate sensor errors or corrupted packets
+- **Current (typical operation):** ~50-212°F
+  - Cold tap water is typically 50-70°F
+  - Maximum is boiling point at 212°F
 
 **Units:** All temperature values are in Fahrenheit (°F).
 
-**Validation:** Temperatures outside the range 40-230°F should be considered invalid/sensor errors.
+**Validation:** If the current temperature reading is below 40°F or above 230°F, the packet should be discarded as invalid. In normal operation, you'll see temperatures from cold tap water (~50-70°F) up to boiling (212°F).
 
 ## Communication Flow
 
