@@ -22,7 +22,7 @@ COSORI_KETTLE_BLE_COMPONENT_SCHEMA = cv.Schema(
 )
 
 CONFIG_SCHEMA = (
-    climate.CLIMATE_SCHEMA.extend(
+    climate._CLIMATE_SCHEMA.extend(
         {
             cv.GenerateID(): cv.declare_id(CosoriKettleBLE),
         }
