@@ -118,7 +118,7 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
       this->node_state = esp32_ble_tracker::ClientState::IDLE;
       this->rx_char_handle_ = 0;
       this->tx_char_handle_ = 0;
-      this->notify_handle_ = 0;
+      //this->notify_handle_ = 0;
       this->frame_buffer_.clear();
       this->registration_sent_ = false;
       this->status_received_ = false;
