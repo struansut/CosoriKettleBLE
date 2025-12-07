@@ -14,12 +14,62 @@ static const char *COSORI_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
 static const char *COSORI_RX_CHAR_UUID = "0000fff1-0000-1000-8000-00805f9b34fb";
 static const char *COSORI_TX_CHAR_UUID = "0000fff2-0000-1000-8000-00805f9b34fb";
 
-// Registration handshake (HELLO_MIN)
-static const uint8_t HELLO_MIN_1[] = {0xa5, 0x22, 0x00, 0x24, 0x00, 0x8a, 0x00, 0x81, 0xd1, 0x00,
-                                       0x36, 0x34, 0x32, 0x38, 0x37, 0x61, 0x39, 0x31, 0x37, 0x65};
-static const uint8_t HELLO_MIN_2[] = {0x37, 0x34, 0x36, 0x61, 0x30, 0x37, 0x33, 0x31, 0x31, 0x36,
-                                       0x36, 0x62, 0x37, 0x36, 0x66, 0x34, 0x33, 0x64, 0x35, 0x63};
-static const uint8_t HELLO_MIN_3[] = {0x62, 0x62};
+// ASCII Identity
+static const uint8_t DEVICE_ID[] = {
+  0x39,0x33,0x62,0x63,0x63,0x30,0x35,0x38,0x35,0x39,
+  0x32,0x36,0x33,0x33,0x34,0x32,0x37,0x63,0x31,0x65,
+  0x36,0x66,0x61,0x32,0x38,0x64,0x36,0x64,0x34,0x32,
+  0x35,0x64,0x31
+};
+static const size_t DEVICE_ID_LEN = sizeof(DEVICE_ID);
+
+// Session Counter
+uint8_t sessionCounter = 0x00;
+
+//Checksum Function
+uint8_t cosoriChecksum(const uint8_t *data, size_t len) {
+  uint16_t sum = 0;
+  for (size_t i = 0; i < len; i++) {
+    sum += data[i];
+  }
+  return (uint8_t)(0xFF - (sum & 0xFF));
+}
+
+
+// Dynamic registration handshake (HELLO_MIN) 
+void buildHelloFrame(uint8_t counter, uint8_t *out, size_t &outLen) {
+  out[0] = 0xA5;         // Frame start
+  out[1] = 0x22;         // Write type
+  out[2] = counter;     // Sequence
+  out[3] = 0x24;        // Payload length = 36
+  out[4] = 0x00;        // Length high byte
+  out[5] = 0x00;        // Checksum placeholder
+
+  // Fixed HELLO flags from capture
+  out[6] = 0x01;
+  out[7] = 0x80;
+  out[8] = 0xD1;
+  out[9] = 0x00;
+
+  // 32-byte ASCII device identity
+  memcpy(&out[10], DEVICE_ID, DEVICE_ID_LEN);
+
+  // Total length = 6 + 36 = 42
+  outLen = 10 + DEVICE_ID_LEN;
+
+  // Compute checksum LAST
+  out[5] = cosoriChecksum(out, outLen);
+}
+
+/*
+bool isValidAck(const uint8_t *rx, size_t len, uint8_t expected) {
+  return len >= 3 &&
+         rx[0] == 0xA5 &&
+         rx[1] == 0x12 &&
+         rx[2] == expected;
+}
+*/
+
 
 void CosoriKettleBLE::setup() {
   ESP_LOGCONFIG(TAG, "Setting up Cosori Kettle BLE...");
@@ -174,18 +224,42 @@ void CosoriKettleBLE::update() {
 // ============================================================================
 
 void CosoriKettleBLE::send_registration_() {
-  ESP_LOGI(TAG, "Sending registration handshake (HELLO_MIN)");
+  ESP_LOGI(TAG, "Sending verified pairing handshake");
 
-  this->send_packet_(HELLO_MIN_1, sizeof(HELLO_MIN_1));
-  delay(80);
+  uint8_t frame[64];
+  size_t len;
 
-  this->send_packet_(HELLO_MIN_2, sizeof(HELLO_MIN_2));
-  delay(80);
+  // HELLO 0
+  buildHelloFrame(sessionCounter, frame, len);
+  this->send_packet_(frame, len);
 
-  this->send_packet_(HELLO_MIN_3, sizeof(HELLO_MIN_3));
-  delay(80);
+  // Wait for ACK
+  uint32_t start = millis();
+  while (millis() - start < 1500) {
+    App.feed_wdt();
+    delay(20);
+    if (this->last_rx_seq_ == sessionCounter)
+      break;
+  }
+  sessionCounter++;
 
-  // Send initial poll
+  // HELLO 1
+  buildHelloFrame(sessionCounter, frame, len);
+  this->send_packet_(frame, len);
+  this->tx_seq_ = sessionCounter;
+
+
+  // Wait for ACK
+  start = millis();
+  while (millis() - start < 1500) {
+    App.feed_wdt();
+    delay(20);
+    if (this->last_rx_seq_ == sessionCounter)
+      break;
+  }
+  sessionCounter++;
+
+  // Begin polling
   this->send_poll_();
 }
 
@@ -202,6 +276,7 @@ void CosoriKettleBLE::send_hello5_() {
   ESP_LOGD(TAG, "Sending HELLO5 (seq=%02x)", seq);
   this->send_packet_(pkt.data(), pkt.size());
 }
+
 
 void CosoriKettleBLE::send_setpoint_(uint8_t mode, uint8_t temp_f) {
   uint8_t seq = this->next_tx_seq_();
@@ -250,60 +325,39 @@ void CosoriKettleBLE::send_packet_(const uint8_t *data, size_t len) {
 // Packet Builders
 // ============================================================================
 
-std::vector<uint8_t> CosoriKettleBLE::build_a5_22_(uint8_t seq, const uint8_t *payload, size_t payload_len,
-                                                    uint8_t checksum) {
-  std::vector<uint8_t> pkt;
-  pkt.push_back(0xA5);
-  pkt.push_back(0x22);
-  pkt.push_back(seq);
-  pkt.push_back(payload_len & 0xFF);
-  pkt.push_back((payload_len >> 8) & 0xFF);
-  pkt.push_back(checksum);
-  pkt.insert(pkt.end(), payload, payload + payload_len);
-  return pkt;
-}
-
-std::vector<uint8_t> CosoriKettleBLE::build_a5_12_(uint8_t seq, const uint8_t *payload, size_t payload_len,
-                                                    uint8_t checksum) {
-  std::vector<uint8_t> pkt;
-  pkt.push_back(0xA5);
-  pkt.push_back(0x12);
-  pkt.push_back(seq);
-  pkt.push_back(payload_len & 0xFF);
-  pkt.push_back((payload_len >> 8) & 0xFF);
-  pkt.push_back(checksum);
-  pkt.insert(pkt.end(), payload, payload + payload_len);
-  return pkt;
-}
-
 std::vector<uint8_t> CosoriKettleBLE::make_poll_(uint8_t seq) {
   const uint8_t payload[] = {0x00, 0x40, 0x40, 0x00};
-  uint8_t checksum = (0xB4 - seq) & 0xFF;
-  return this->build_a5_22_(seq, payload, sizeof(payload), checksum);
+  auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
+  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
+  return pkt;
 }
 
 std::vector<uint8_t> CosoriKettleBLE::make_hello5_(uint8_t seq) {
   const uint8_t payload[] = {0x00, 0xF2, 0xA3, 0x00, 0x00, 0x01, 0x10, 0x0E};
-  uint8_t checksum = (0x7C - seq) & 0xFF;
-  return this->build_a5_22_(seq, payload, sizeof(payload), checksum);
+  auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
+  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
+  return pkt;
 }
 
 std::vector<uint8_t> CosoriKettleBLE::make_setpoint_(uint8_t seq, uint8_t mode, uint8_t temp_f) {
-  const uint8_t payload[] = {0x00, 0xF0, 0xA3, 0x00, mode, temp_f, 0x01, 0x10, 0x0E};
-  uint8_t checksum = (0x7D - seq - mode - temp_f) & 0xFF;
-  return this->build_a5_22_(seq, payload, sizeof(payload), checksum);
+  uint8_t payload[] = {0x00, 0xF0, 0xA3, 0x00, mode, temp_f, 0x01, 0x10, 0x0E};
+  auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
+  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
+  return pkt;
 }
 
 std::vector<uint8_t> CosoriKettleBLE::make_f4_(uint8_t seq) {
   const uint8_t payload[] = {0x00, 0xF4, 0xA3, 0x00};
-  uint8_t checksum = (0x9D - seq) & 0xFF;
-  return this->build_a5_22_(seq, payload, sizeof(payload), checksum);
+  auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
+  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
+  return pkt;
 }
 
 std::vector<uint8_t> CosoriKettleBLE::make_ctrl_(uint8_t seq) {
-  uint8_t checksum = (0xC3 - seq) & 0xFF;
   const uint8_t payload[] = {0x00, 0x41, 0x40, 0x00};
-  return this->build_a5_12_(seq, payload, sizeof(payload), checksum);
+  auto pkt = this->build_a5_12_(seq, payload, sizeof(payload), 0x00);
+  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
+  return pkt;
 }
 
 // ============================================================================
