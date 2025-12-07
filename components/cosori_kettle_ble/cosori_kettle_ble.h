@@ -7,6 +7,8 @@
 #include "esphome/components/number/number.h"
 #include "esphome/components/switch/switch.h"
 #include "esphome/components/climate/climate.h"
+#include <cstdint>
+
 
 #ifdef USE_ESP32
 
@@ -57,7 +59,8 @@ class CosoriKettleBLE : public esphome::ble_client::BLEClientNode, public Pollin
   // BLE characteristics
   uint16_t rx_char_handle_{0};
   uint16_t tx_char_handle_{0};
-  uint16_t notify_handle_{0};
+  // Removed
+  //uint16_t notify_handle_{0};
 
   // Protocol state
   uint8_t last_rx_seq_{0};
@@ -95,7 +98,7 @@ class CosoriKettleBLE : public esphome::ble_client::BLEClientNode, public Pollin
   void send_hello5_();
   void send_setpoint_(uint8_t mode, uint8_t temp_f);
   void send_f4_();
-  void send_ctrl_(uint8_t seq_base);
+  void send_ctrl_(uint8_t seq);
   void send_packet_(const uint8_t *data, size_t len);
 
   // Packet builders
