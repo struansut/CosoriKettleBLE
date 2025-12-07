@@ -455,7 +455,13 @@ void CosoriKettleBLE::process_frame_buffer_() {
     } else if (frame_type == 0x12) {
       // Extended status (A5 12)
       this->parse_extended_status_(payload, payload_len);
+      // Send required ACK for every status frame
+      auto ack = this->make_ctrl_(this->last_rx_seq_);
+      this->send_packet_(ack.data(), ack.size());
     }
+
+    
+
 
     // Remove processed frame
     this->frame_buffer_.erase(this->frame_buffer_.begin(), this->frame_buffer_.begin() + frame_len);
