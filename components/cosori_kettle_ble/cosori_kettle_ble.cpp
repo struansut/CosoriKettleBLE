@@ -322,6 +322,51 @@ void CosoriKettleBLE::send_packet_(const uint8_t *data, size_t len) {
 }
 
 // ============================================================================
+// Low-level Frame Builders (FIX FOR LINKER ERROR)
+// ============================================================================
+
+std::vector<uint8_t> CosoriKettleBLE::build_a5_22_(
+    uint8_t seq, const uint8_t *payload, size_t payload_len, uint8_t /*checksum*/) {
+
+  std::vector<uint8_t> pkt;
+  pkt.reserve(6 + payload_len);
+
+  pkt.push_back(0xA5);                 // Frame start
+  pkt.push_back(0x22);                 // Frame type (WRITE)
+  pkt.push_back(seq);                  // Sequence
+  pkt.push_back(payload_len & 0xFF);   // Length LSB
+  pkt.push_back((payload_len >> 8) & 0xFF); // Length MSB
+  pkt.push_back(0x00);                 // Checksum placeholder
+
+  for (size_t i = 0; i < payload_len; i++) {
+    pkt.push_back(payload[i]);
+  }
+
+  return pkt;
+}
+
+std::vector<uint8_t> CosoriKettleBLE::build_a5_12_(
+    uint8_t seq, const uint8_t *payload, size_t payload_len, uint8_t /*checksum*/) {
+
+  std::vector<uint8_t> pkt;
+  pkt.reserve(6 + payload_len);
+
+  pkt.push_back(0xA5);                 // Frame start
+  pkt.push_back(0x12);                 // Frame type (CTRL)
+  pkt.push_back(seq);                  // Sequence
+  pkt.push_back(payload_len & 0xFF);   // Length LSB
+  pkt.push_back((payload_len >> 8) & 0xFF); // Length MSB
+  pkt.push_back(0x00);                 // Checksum placeholder
+
+  for (size_t i = 0; i < payload_len; i++) {
+    pkt.push_back(payload[i]);
+  }
+
+  return pkt;
+}
+
+
+// ============================================================================
 // Packet Builders
 // ============================================================================
 
