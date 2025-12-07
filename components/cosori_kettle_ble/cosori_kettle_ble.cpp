@@ -28,13 +28,12 @@ uint8_t sessionCounter = 0x00;
 
 //Checksum Function
 uint8_t cosoriChecksum(const uint8_t *data, size_t len) {
-  uint16_t sum = 0;
+  uint8_t sum = 0;
   for (size_t i = 0; i < len; i++) {
     sum += data[i];
   }
-  return (uint8_t)(0xFF - (sum & 0xFF));
+  return sum;
 }
-
 
 // Dynamic registration handshake (HELLO_MIN) 
 void buildHelloFrame(uint8_t counter, uint8_t *out, size_t &outLen) {
@@ -169,6 +168,12 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
       // Mark registration sent
       this->registration_sent_ = true;
       break;
+
+      // Reset session counter
+      sessionCounter = 0x00;
+      this->tx_seq_ = 0;
+      this->last_rx_seq_ = 0;
+
     }
 
     case ESP_GATTC_NOTIFY_EVT: {
@@ -259,8 +264,9 @@ void CosoriKettleBLE::send_registration_() {
   }
   sessionCounter++;
 
-  // Begin polling
-  this->send_poll_();
+  // Wait for first status before polling
+  this->status_received_ = false;
+
 }
 
 void CosoriKettleBLE::send_poll_() {
