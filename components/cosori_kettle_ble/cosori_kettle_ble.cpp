@@ -1,3 +1,6 @@
+#error "THIS IS THE COSORI FILE I AM EDITING"
+
+
 #include "cosori_kettle_ble.h"
 #include "esphome/core/log.h"
 #include "esphome/core/application.h"
