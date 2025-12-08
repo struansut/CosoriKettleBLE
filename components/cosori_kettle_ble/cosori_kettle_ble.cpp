@@ -42,7 +42,7 @@ void buildHelloFrame(uint8_t counter, uint8_t *out, size_t &outLen) {
   out[0] = 0xA5;         // Frame start
   out[1] = 0x22;         // Write type
   out[2] = counter;     // Sequence
-  out[3] = 0x24;        // Payload length = 36
+  out[3] = 0x30;        // Payload length = 30
   out[4] = 0x00;        // Length high byte
   out[5] = 0x00;        // Checksum placeholder
 
@@ -186,8 +186,6 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
       // Send registration handshake
       //this->send_registration_();
 
-      // Mark registration sent
-      this->registration_sent_ = true;
       break;
 
       // Reset session counter
@@ -242,7 +240,6 @@ void CosoriKettleBLE::update() {
     this->send_packet_(frame, len);
     sessionCounter++;
 
-    this->registration_sent_ = true;
     this->start_registration_requested_ = false;
     return;
   }
@@ -283,7 +280,6 @@ void CosoriKettleBLE::send_registration_() {
   this->send_packet_(frame, len);
   sessionCounter++;
 
-  this->registration_sent_ = true;
 }
 
 
@@ -291,13 +287,6 @@ void CosoriKettleBLE::send_poll_() {
   uint8_t seq = this->next_tx_seq_();
   auto pkt = this->make_poll_(seq);
   ESP_LOGV(TAG, "Sending POLL (seq=%02x)", seq);
-  this->send_packet_(pkt.data(), pkt.size());
-}
-
-void CosoriKettleBLE::send_hello5_() {
-  uint8_t seq = this->next_tx_seq_();
-  auto pkt = this->make_hello5_(seq);
-  ESP_LOGD(TAG, "Sending HELLO5 (seq=%02x)", seq);
   this->send_packet_(pkt.data(), pkt.size());
 }
 
@@ -466,19 +455,19 @@ void CosoriKettleBLE::process_frame_buffer_() {
     // Update last RX sequence
     this->last_rx_seq_ = seq;
 
+    if (!this->registration_sent_ && frame_type == 0x12) {
+      this->registration_sent_ = true;
+    }
+
+
     // Parse based on frame type
     if (frame_type == 0x22) {
-    this->parse_compact_status_(payload, payload_len);
+      this->parse_compact_status_(payload, payload_len);
+    }
+    else if (frame_type == 0x12) {
+      this->parse_extended_status_(payload, payload_len);
+    }
 
-    auto ack = this->make_ctrl_(seq);
-    this->send_packet_(ack.data(), ack.size());
-  }
-  else if (frame_type == 0x12) {
-  this->parse_extended_status_(payload, payload_len);
-
-  auto ack = this->make_ctrl_(seq);
-  this->send_packet_(ack.data(), ack.size());
-}
 
 
     
