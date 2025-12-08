@@ -42,7 +42,7 @@ void buildHelloFrame(uint8_t counter, uint8_t *out, size_t &outLen) {
   out[0] = 0xA5;         // Frame start
   out[1] = 0x22;         // Write type
   out[2] = counter;     // Sequence
-  out[3] = 0x30;        // Payload length = 30
+  out[3] = 0x24;        // Payload length = 24
   out[4] = 0x00;        // Length high byte
   out[5] = 0x00;        // Checksum placeholder
 
