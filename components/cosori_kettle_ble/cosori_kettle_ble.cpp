@@ -30,11 +30,11 @@ uint8_t sessionCounter = 0x00;
 uint8_t cosoriChecksum(const uint8_t *data, size_t len) {
   uint8_t sum = 0;
   for (size_t i = 0; i < len; i++) {
-    if (i == 5) continue;   // <-- DO NOT include checksum byte
     sum += data[i];
   }
   return sum;
 }
+
 
 
 // Dynamic registration handshake (HELLO_MIN) 
@@ -47,16 +47,18 @@ void buildHelloFrame(uint8_t counter, uint8_t *out, size_t &outLen) {
   out[5] = 0x00;        // Checksum placeholder
 
   // Fixed HELLO flags from capture
-  out[6] = 0x01;
-  out[7] = 0x80;
-  out[8] = 0xD1;
-  out[9] = 0x00;
+  out[6]  = 0x01;
+  out[7]  = 0x80;
+  out[8]  = 0xD1;
+  out[9]  = 0x00;
+  out[10] = 0x00;
+
 
   // 32-byte ASCII device identity
-  memcpy(&out[10], DEVICE_ID, DEVICE_ID_LEN);
+  memcpy(&out[11], DEVICE_ID, DEVICE_ID_LEN);
 
   // Total length = 6 + 36 = 42
-  outLen = 10 + DEVICE_ID_LEN;
+  outLen = 11 + DEVICE_ID_LEN;
 
   // Compute checksum LAST
   out[5] = cosoriChecksum(out, outLen);
@@ -374,19 +376,23 @@ std::vector<uint8_t> CosoriKettleBLE::build_a5_12_(
   std::vector<uint8_t> pkt;
   pkt.reserve(6 + payload_len);
 
-  pkt.push_back(0xA5);                 // Frame start
-  pkt.push_back(0x12);                 // Frame type (CTRL)
-  pkt.push_back(seq);                  // Sequence
-  pkt.push_back(payload_len & 0xFF);   // Length LSB
-  pkt.push_back((payload_len >> 8) & 0xFF); // Length MSB
-  pkt.push_back(0x00);                 // Checksum placeholder
+  pkt.push_back(0xA5);
+  pkt.push_back(0x12);
+  pkt.push_back(seq);
+  pkt.push_back(payload_len & 0xFF);
+  pkt.push_back((payload_len >> 8) & 0xFF);
+  pkt.push_back(0x00);   // checksum placeholder
 
   for (size_t i = 0; i < payload_len; i++) {
     pkt.push_back(payload[i]);
   }
 
+  // ✅ REQUIRED
+  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
+
   return pkt;
 }
+
 
 
 // ============================================================================
