@@ -8,8 +8,6 @@ namespace esphome {
 namespace cosori_kettle_ble {
 
 static const char *const TAG = "cosori_kettle_ble";
-static const char *const BUILD_ID = "COSORI_BUILD_v1_fix3";  // change this string each time you change code
-
 
 // BLE UUIDs
 static const char *COSORI_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
@@ -41,8 +39,6 @@ uint8_t cosoriChecksum(const uint8_t *data, size_t len) {
 
 // Dynamic registration handshake (HELLO_MIN) 
 void buildHelloFrame(uint8_t counter, uint8_t *out, size_t &outLen) {
-  ESP_LOGD(TAG, "buildHelloFrame counter=0x%02x", counter);
-
   out[0] = 0xA5;         // Frame start
   out[1] = 0x22;         // Write type
   out[2] = counter;     // Sequence
@@ -154,6 +150,23 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
         ESP_LOGE(TAG, "TX characteristic not found");
         break;
       }
+
+      auto cccd_uuid = esp32_ble_tracker::ESPBTUUID::from_uint16(0x2902);
+      auto *cccd = rx_chr->get_descriptor(cccd_uuid);
+      if (cccd) {
+        this->cccd_handle_ = cccd->handle;
+        uint8_t enable_notify[2] = {0x01, 0x00};
+        esp_ble_gattc_write_char_descr(
+          gattc_if,
+          this->parent_->get_conn_id(),
+          this->cccd_handle_,
+          sizeof(enable_notify),
+          enable_notify,
+          ESP_GATT_WRITE_TYPE_RSP,
+          ESP_GATT_AUTH_REQ_NONE);
+        ESP_LOGI(TAG, "Wrote CCCD (enable notifications)");
+      }
+
       this->tx_char_handle_ = tx_chr->handle;
 
       // Register for notifications
@@ -169,7 +182,7 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
       ESP_LOGI(TAG, "Registered for notifications, sending registration handshake");
 
       // Send registration handshake
-      this->send_registration_();
+      //this->send_registration_();
 
       // Mark registration sent
       this->registration_sent_ = true;
@@ -207,9 +220,31 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
     default:
       break;
   }
+  case ESP_GATTC_WRITE_DESCR_EVT: {
+    ESP_LOGD(TAG, "WRITE_DESCR_EVT handle=0x%04X status=%d", 
+    param->write.handle, param->write.status);
+
+    this->node_state = esp32_ble_tracker::ClientState::ESTABLISHED;
+    this->start_registration_requested_ = true;
+    break;
+  }
+
 }
 
 void CosoriKettleBLE::update() {
+  if (this->start_registration_requested_ && !this->registration_sent_) {
+    ESP_LOGI(TAG, "Starting registration from update()");
+    uint8_t frame[64];
+    size_t len;
+    buildHelloFrame(sessionCounter, frame, len);
+    this->send_packet_(frame, len);
+    sessionCounter++;
+
+    this->registration_sent_ = true;
+    this->start_registration_requested_ = false;
+    return;
+  }
+
   this->track_online_status_();
 
   if (!this->ble_enabled_) {
@@ -235,45 +270,20 @@ void CosoriKettleBLE::update() {
 // ============================================================================
 
 void CosoriKettleBLE::send_registration_() {
-  ESP_LOGI(TAG, "Sending verified pairing handshake");
-
   uint8_t frame[64];
   size_t len;
 
-  // HELLO 0
   buildHelloFrame(sessionCounter, frame, len);
   this->send_packet_(frame, len);
-
-  // Wait for ACK
-  uint32_t start = millis();
-  while (millis() - start < 1500) {
-    App.feed_wdt();
-    delay(20);
-    if (this->last_rx_seq_ == sessionCounter)
-      break;
-  }
   sessionCounter++;
 
-  // HELLO 1
   buildHelloFrame(sessionCounter, frame, len);
   this->send_packet_(frame, len);
-  this->tx_seq_ = sessionCounter;
-
-
-  // Wait for ACK
-  start = millis();
-  while (millis() - start < 1500) {
-    App.feed_wdt();
-    delay(20);
-    if (this->last_rx_seq_ == sessionCounter)
-      break;
-  }
   sessionCounter++;
 
-  // Wait for first status before polling
-  this->status_received_ = false;
-
+  this->registration_sent_ = true;
 }
+
 
 void CosoriKettleBLE::send_poll_() {
   uint8_t seq = this->next_tx_seq_();
