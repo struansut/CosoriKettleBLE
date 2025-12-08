@@ -394,12 +394,6 @@ std::vector<uint8_t> CosoriKettleBLE::make_poll_(uint8_t seq) {
   return pkt;
 }
 
-std::vector<uint8_t> CosoriKettleBLE::make_hello5_(uint8_t seq) {
-  const uint8_t payload[] = {0x00, 0xF2, 0xA3, 0x00, 0x00, 0x01, 0x10, 0x0E};
-  auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
-  return pkt;
-}
-
 std::vector<uint8_t> CosoriKettleBLE::make_setpoint_(uint8_t seq, uint8_t mode, uint8_t temp_f) {
   uint8_t payload[] = {0x00, 0xF0, 0xA3, 0x00, mode, temp_f, 0x01, 0x10, 0x0E};
   auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
@@ -574,10 +568,6 @@ void CosoriKettleBLE::start_heating() {
   uint8_t mode = (temp_f == 212) ? 0x04 : 0x06;
 
   ESP_LOGI(TAG, "Starting kettle at %.0f°F", this->target_setpoint_f_);
-
-  // Send HELLO5
-  this->send_hello5_();
-  delay(60);
 
   // Send SETPOINT
   this->send_setpoint_(mode, temp_f);
