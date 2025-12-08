@@ -217,16 +217,16 @@ void CosoriKettleBLE::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_i
       break;
     }
 
+    case ESP_GATTC_WRITE_DESCR_EVT: {
+      ESP_LOGI(TAG, "CCCD write complete");
+      this->node_state = esp32_ble_tracker::ClientState::ESTABLISHED;
+      this->start_registration_requested_ = true;
+      break;
+    }
+
+
     default:
       break;
-  }
-  case ESP_GATTC_WRITE_DESCR_EVT: {
-    ESP_LOGD(TAG, "WRITE_DESCR_EVT handle=0x%04X status=%d", 
-    param->write.handle, param->write.status);
-
-    this->node_state = esp32_ble_tracker::ClientState::ESTABLISHED;
-    this->start_registration_requested_ = true;
-    break;
   }
 
 }
