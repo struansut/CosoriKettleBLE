@@ -8,6 +8,8 @@ namespace esphome {
 namespace cosori_kettle_ble {
 
 static const char *const TAG = "cosori_kettle_ble";
+static const char *const BUILD_ID = "COSORI_BUILD_v1_fix3";  // change this string each time you change code
+
 
 // BLE UUIDs
 static const char *COSORI_SERVICE_UUID = "0000fff0-0000-1000-8000-00805f9b34fb";
@@ -39,6 +41,8 @@ uint8_t cosoriChecksum(const uint8_t *data, size_t len) {
 
 // Dynamic registration handshake (HELLO_MIN) 
 void buildHelloFrame(uint8_t counter, uint8_t *out, size_t &outLen) {
+  ESP_LOGD(TAG, "buildHelloFrame counter=0x%02x", counter);
+
   out[0] = 0xA5;         // Frame start
   out[1] = 0x22;         // Write type
   out[2] = counter;     // Sequence
