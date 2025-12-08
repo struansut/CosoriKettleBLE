@@ -30,10 +30,12 @@ uint8_t sessionCounter = 0x00;
 uint8_t cosoriChecksum(const uint8_t *data, size_t len) {
   uint8_t sum = 0;
   for (size_t i = 0; i < len; i++) {
+    if (i == 5) continue;   // <-- DO NOT include checksum byte
     sum += data[i];
   }
   return sum;
 }
+
 
 // Dynamic registration handshake (HELLO_MIN) 
 void buildHelloFrame(uint8_t counter, uint8_t *out, size_t &outLen) {
@@ -348,6 +350,7 @@ std::vector<uint8_t> CosoriKettleBLE::build_a5_22_(
     pkt.push_back(payload[i]);
   }
 
+  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
   return pkt;
 }
 
@@ -379,35 +382,30 @@ std::vector<uint8_t> CosoriKettleBLE::build_a5_12_(
 std::vector<uint8_t> CosoriKettleBLE::make_poll_(uint8_t seq) {
   const uint8_t payload[] = {0x00, 0x40, 0x40, 0x00};
   auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
-  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
   return pkt;
 }
 
 std::vector<uint8_t> CosoriKettleBLE::make_hello5_(uint8_t seq) {
   const uint8_t payload[] = {0x00, 0xF2, 0xA3, 0x00, 0x00, 0x01, 0x10, 0x0E};
   auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
-  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
   return pkt;
 }
 
 std::vector<uint8_t> CosoriKettleBLE::make_setpoint_(uint8_t seq, uint8_t mode, uint8_t temp_f) {
   uint8_t payload[] = {0x00, 0xF0, 0xA3, 0x00, mode, temp_f, 0x01, 0x10, 0x0E};
   auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
-  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
   return pkt;
 }
 
 std::vector<uint8_t> CosoriKettleBLE::make_f4_(uint8_t seq) {
   const uint8_t payload[] = {0x00, 0xF4, 0xA3, 0x00};
   auto pkt = this->build_a5_22_(seq, payload, sizeof(payload), 0x00);
-  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
   return pkt;
 }
 
 std::vector<uint8_t> CosoriKettleBLE::make_ctrl_(uint8_t seq) {
   const uint8_t payload[] = {0x00, 0x41, 0x40, 0x00};
   auto pkt = this->build_a5_12_(seq, payload, sizeof(payload), 0x00);
-  pkt[5] = cosoriChecksum(pkt.data(), pkt.size());
   return pkt;
 }
 
@@ -450,15 +448,18 @@ void CosoriKettleBLE::process_frame_buffer_() {
 
     // Parse based on frame type
     if (frame_type == 0x22) {
-      // Compact status (A5 22)
-      this->parse_compact_status_(payload, payload_len);
-    } else if (frame_type == 0x12) {
-      // Extended status (A5 12)
-      this->parse_extended_status_(payload, payload_len);
-      // Send required ACK for every status frame
-      auto ack = this->make_ctrl_(this->last_rx_seq_);
-      this->send_packet_(ack.data(), ack.size());
-    }
+    this->parse_compact_status_(payload, payload_len);
+
+    auto ack = this->make_ctrl_(seq);
+    this->send_packet_(ack.data(), ack.size());
+  }
+  else if (frame_type == 0x12) {
+  this->parse_extended_status_(payload, payload_len);
+
+  auto ack = this->make_ctrl_(seq);
+  this->send_packet_(ack.data(), ack.size());
+}
+
 
     
 
