@@ -56,6 +56,11 @@ class CosoriKettleBLE : public esphome::ble_client::BLEClientNode, public Pollin
   void control(const climate::ClimateCall &call) override;
 
  protected:
+
+  // CCCD Write
+  uint16_t cccd_handle_{0};
+  bool start_registration_requested_{false};
+
   // BLE characteristics
   uint16_t rx_char_handle_{0};
   uint16_t tx_char_handle_{0};
