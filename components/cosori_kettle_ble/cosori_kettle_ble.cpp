@@ -98,7 +98,7 @@ void CosoriKettleBLE::setup() {
 
 void CosoriKettleBLE::dump_config() {
   ESP_LOGCONFIG(TAG, "Cosori Kettle BLE:");
-  ESP_LOGCONFIG(TAG, "  MAC Address: %s", this->parent_->address_str().c_str());
+  ESP_LOGCONFIG(TAG, "  MAC Address: %s", this->parent_->address_str());
   ESP_LOGCONFIG(TAG, "  Update Interval: %ums", this->get_update_interval());
   LOG_BINARY_SENSOR("  ", "On Base", this->on_base_binary_sensor_);
   LOG_BINARY_SENSOR("  ", "Heating", this->heating_binary_sensor_);
