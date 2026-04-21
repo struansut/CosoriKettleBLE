@@ -642,7 +642,7 @@ climate::ClimateTraits CosoriKettleBLE::traits() {
 
   // Temperature range in Celsius (ESPHome expects Celsius)
   // 104°F = 40°C, 212°F = 100°C
-  traits.add_supported_feature_flag(climate::CLIMATE_FEAT_CURRENT_TEMPERATURE);
+  traits.set_supports_current_temperature(true);
   traits.set_visual_min_temperature(40.0f);
   traits.set_visual_max_temperature(100.0f);
   traits.set_visual_temperature_step(0.5f);
@@ -654,7 +654,7 @@ climate::ClimateTraits CosoriKettleBLE::traits() {
   });
 
   // Supported actions
-  traits.add_supported_feature_flag(climate::CLIMATE_FEAT_ACTION);
+  traits.set_supports_action(true);
 
   return traits;
 }
